@@ -1,2 +1,2 @@
-#Procedural Generation: Dungeon
+Procedural Generation: Dungeon
 ---
