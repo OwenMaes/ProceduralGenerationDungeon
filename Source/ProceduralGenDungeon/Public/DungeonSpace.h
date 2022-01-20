@@ -47,7 +47,7 @@ struct FDungeonObject
 
 	FDungeonObject()
 		:objectType(EDungeonObjectType::FLOOR)
-		, rotation()
+		, rotation(1,0,0)
 		, objectAlignement(EDungeonObjectAlign::CENTER)
 	{
 
@@ -68,22 +68,24 @@ struct FTile
 	GENERATED_BODY()
 		int left;
 	int bottom;
-	TArray<FDungeonObject> objects;
+	TArray<FDungeonObject> objectsToSpawn;
 	ETileType tileType;
+	int corridorID;
 
 	FTile()
 		:left(0),
 		bottom(0),
-	tileType(ETileType::EMPTY)
+	tileType(ETileType::EMPTY),
+	corridorID(-1)
 	{
 
 	}
 
-	FTile(int tileLeft, int tileBottom, ETileType tileTypex)
+	FTile(int tileLeft, int tileBottom, ETileType tileTypex, int corridorIDx = -1)
 		:left(tileLeft),
 		bottom(tileBottom),
-		tileType(tileTypex)
-	
+		tileType(tileTypex),
+		corridorID(corridorIDx)
 	{
 
 	}
@@ -96,6 +98,9 @@ struct FCorridor
 		FIntVector start;
 	FIntVector end;
 	ESeperation seperation;
+	int id;
+	int fromSpaceID;
+	int toSpaceID;
 };
 
 USTRUCT()
@@ -217,6 +222,7 @@ private:
 	TArray<FSpace*> DungeonRooms;
 	TMap<int, FCorridor*> DungeonCorridors;
 	TArray<FTile> TileArray;
+	int TileRows;
 
 	void CreateCellGrid();
 	void GenerateDungeon();
@@ -226,6 +232,7 @@ private:
 	void FillTileGrid();
 	void ConstructDungeonGrid();
 	void ShrinkSpaceToRoom(FSpace* currentSpace);
+	bool CheckIfWallShouldBePlaced(int adjacentTileIndex, TArray<int>& roomCorridorConnections);
 
 public:
 	// Called every frame

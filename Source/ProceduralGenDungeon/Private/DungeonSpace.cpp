@@ -125,6 +125,8 @@ FSpace* ADungeonSpace::SplitSpace(FSpace* currentSpace, int index, int maxElemen
 				corridor->start.X = parentData.left + (parentData.width / TileSize / 2 - 1) * TileSize;
 				corridor->start.Y = parentData.bottom + (parentData.height / TileSize / 2 + 1) * TileSize;
 				corridor->seperation = parentData.seperation;
+				corridor->fromSpaceID = index;
+				corridor->id = DungeonCorridors.Num() + 1;
 
 				DungeonCorridors.Add(index, corridor);
 
@@ -147,6 +149,7 @@ FSpace* ADungeonSpace::SplitSpace(FSpace* currentSpace, int index, int maxElemen
 					FCorridor* corridorOfSister = DungeonCorridors[index - 1];
 					corridorOfSister->end.X = parentData.left + (parentData.width / TileSize / 2 + 1) * TileSize;
 					corridorOfSister->end.Y = parentData.bottom + (parentData.height / TileSize / 2 - 1) * TileSize;
+					corridorOfSister->toSpaceID = index;
 
 				}
 			}
@@ -232,11 +235,11 @@ void ADungeonSpace::FillTileGrid()
 {
 	int tilesDungeon = DungeonSize / TileSize;
 	int tileIndex;
-	//Fill rooms in grid
+	//Fill rooms in grid with floor tiles
 	int left, right, top, bottom;
 	for (int i = 0; i < DungeonRooms.Num(); i++)
 	{
-		ShrinkSpaceToRoom(DungeonRooms[i]);
+		ShrinkSpaceToRoom(DungeonRooms[i]); //todo fix corridor connections
 
 		left = DungeonRooms[i]->data.left;
 		right = DungeonRooms[i]->data.left + DungeonRooms[i]->data.width;
@@ -251,7 +254,7 @@ void ADungeonSpace::FillTileGrid()
 				if (TileArray.IsValidIndex(tileIndex))
 				{
 					TileArray[tileIndex].tileType = ETileType::ROOM;
-					TileArray[tileIndex].objects.Add(FDungeonObject()); //default object is a floor
+					TileArray[tileIndex].objectsToSpawn.Add(FDungeonObject()); //default object is a floor
 					TileArray[tileIndex].left = col;
 					TileArray[tileIndex].bottom = row;
 				}
@@ -261,53 +264,107 @@ void ADungeonSpace::FillTileGrid()
 		}
 	}
 
-	//fill corridors in grid
+	//fill corridors in grid with floor tiles
 	for (auto& elem : DungeonCorridors)
 	{
 		FCorridor* currentCorridor = elem.Value;
 		int x, y;
 		if (currentCorridor->seperation == ESeperation::VERTICAL) //vertical seperation = horizontal corridor
 		{
+			int startTile = -1, endTile = -1;
 			y = currentCorridor->start.Y;
 			for (x = currentCorridor->start.X; x <= currentCorridor->end.X; x += TileSize)
 			{
 				tileIndex = (x / TileSize) + tilesDungeon * (y / TileSize);
-				if (TileArray.IsValidIndex(tileIndex) && TileArray[tileIndex].objects.Num() == 0)
+				if (TileArray.IsValidIndex(tileIndex) && TileArray[tileIndex].objectsToSpawn.Num() == 0)
 				{
 					TileArray[tileIndex].tileType = ETileType::CORRIDOR;
-					TileArray[tileIndex].objects.Add(FDungeonObject());
+					TileArray[tileIndex].objectsToSpawn.Add(FDungeonObject()); //floor
 					TileArray[tileIndex].left = x;
 					TileArray[tileIndex].bottom = y;
+					TileArray[tileIndex].corridorID = currentCorridor->id;
+
+					//add walls
+					FDungeonObject wall1 = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::TOP, FVector(0, -1, 0));
+					FDungeonObject wall2 = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::BOTTOM, FVector(0, -1, 0));
+					TileArray[tileIndex].objectsToSpawn.Add(wall1);
+					TileArray[tileIndex].objectsToSpawn.Add(wall2);
+
+					//startTile is first valid tile index and endTile is last valid tileIndex
+					if(startTile == -1)
+					{
+						startTile = tileIndex;
+					}
+					endTile = tileIndex;
 				}
 			}
+			//spawn wall on start and endtile
+			/*if(TileArray.IsValidIndex(startTile))
+			{
+				FDungeonObject wallLeft = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::LEFT, FVector(1, 0, 0));
+				TileArray[startTile].objectsToSpawn.Add(wallLeft);
+			}
+			if (TileArray.IsValidIndex(endTile))
+			{
+				FDungeonObject wallRight = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::RIGHT, FVector(1, 0, 0));
+				TileArray[endTile].objectsToSpawn.Add(wallRight);
+			}*/
+			
 		}
 		else if (currentCorridor->seperation == ESeperation::HORIZONTAL)//horizontal seperation = vertical corridor
 		{
+			int startTile = -1, endTile = -1;
 			x = currentCorridor->start.X;
 			for (y = currentCorridor->start.Y; y >= currentCorridor->end.Y; y -= TileSize)
 			{
 				tileIndex = (x / TileSize) + tilesDungeon * (y / TileSize);
-				if (TileArray.IsValidIndex(tileIndex) && TileArray[tileIndex].objects.Num() == 0)
+				if (TileArray.IsValidIndex(tileIndex) && TileArray[tileIndex].objectsToSpawn.Num() == 0)
 				{
 					TileArray[tileIndex].tileType = ETileType::CORRIDOR;
-					TileArray[tileIndex].objects.Add(FDungeonObject());
+					TileArray[tileIndex].objectsToSpawn.Add(FDungeonObject()); //floor
 					TileArray[tileIndex].left = x;
 					TileArray[tileIndex].bottom = y;
+					TileArray[tileIndex].corridorID = currentCorridor->id;
+
+					//add walls
+					FDungeonObject wall1 = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::LEFT, FVector(1, 0, 0));
+					FDungeonObject wall2 = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::RIGHT, FVector(1, 0, 0));
+					TileArray[tileIndex].objectsToSpawn.Add(wall1);
+					TileArray[tileIndex].objectsToSpawn.Add(wall2);
+
+					//startTile is first valid tile index and endTile is last valid tileIndex
+					if (startTile == -1)
+					{
+						startTile = tileIndex;
+					}
+					endTile = tileIndex;
 				}
 			}
+			//spawn wall on start and endtile
+			/*if (TileArray.IsValidIndex(startTile))
+			{
+				FDungeonObject wallTop = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::TOP, FVector(0, -1, 0));
+				TileArray[startTile].objectsToSpawn.Add(wallTop);
+			}
+			if (TileArray.IsValidIndex(endTile))
+			{
+				FDungeonObject wallBot = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::BOTTOM, FVector(0, -1, 0));
+				TileArray[endTile].objectsToSpawn.Add(wallBot);
+			}*/
 		}
 	}
 
-	//add other objects to rooms
+	//add other objectsToSpawn to rooms
 	for (int i = 0; i < DungeonRooms.Num(); i++)
 	{
-		ShrinkSpaceToRoom(DungeonRooms[i]);
-
 		left = DungeonRooms[i]->data.left;
 		right = DungeonRooms[i]->data.left + DungeonRooms[i]->data.width;
 		bottom = DungeonRooms[i]->data.bottom;
 		top = DungeonRooms[i]->data.bottom + DungeonRooms[i]->data.height;
-
+		
+		//hold Tmap with corridors id and true or false if they are already connected
+		TArray<int> roomCorridorConnections{};
+		//change to 4 for loops (left, right, ... side)
 		for (int row = bottom; row < top; row += TileSize)
 		{
 			for (int col = left; col < right; col += TileSize) {
@@ -317,21 +374,22 @@ void ADungeonSpace::FillTileGrid()
 				{
 					if(row == bottom)
 					{
-						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::BOTTOM, FVector());
-						TileArray[tileIndex].objects.Add(dObject);
+						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::BOTTOM, FVector(0, -1, 0));
+						TileArray[tileIndex].objectsToSpawn.Add(dObject);
 					}else if(row == top - TileSize)
 					{
-						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::TOP, FVector());
-						TileArray[tileIndex].objects.Add(dObject);
+						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::TOP, FVector(0, -1, 0));
+						TileArray[tileIndex].objectsToSpawn.Add(dObject);
 					}
-					if(col == left)
+					if(col == left && CheckIfWallShouldBePlaced(tileIndex - 1, roomCorridorConnections))
 					{
-						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::LEFT, FVector());
-						TileArray[tileIndex].objects.Add(dObject);
-					}else if(col == right - TileSize)
+						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::LEFT, FVector(1, 0, 0));
+						TileArray[tileIndex].objectsToSpawn.Add(dObject);
+						
+					}else if(col == right - TileSize && CheckIfWallShouldBePlaced(tileIndex + 1, roomCorridorConnections))
 					{
-						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::RIGHT, FVector());
-						TileArray[tileIndex].objects.Add(dObject);
+						FDungeonObject dObject = FDungeonObject(EDungeonObjectType::WALL, EDungeonObjectAlign::RIGHT, FVector(1, 0, 0));
+						TileArray[tileIndex].objectsToSpawn.Add(dObject);
 					}
 					
 				}
@@ -339,7 +397,9 @@ void ADungeonSpace::FillTileGrid()
 			}
 
 		}
+	
 	}
+	
 }
 
 void ADungeonSpace::ConstructDungeonGrid()
@@ -349,7 +409,8 @@ void ADungeonSpace::ConstructDungeonGrid()
 	FTransform minimapTileTransform = GetTransform();
 	FTransform dungeonTileTranform = GetTransform();
 	FVector FromActorToMinimapPos = MinimapPos - GetActorLocation();
-	
+	UInstancedStaticMeshComponent* meshISMCToAddInstance = nullptr;
+	int objectWidth;
 	uint32 newInstanceIndex;
 	
 	//scale cube mesh to minimap tile size
@@ -378,9 +439,73 @@ void ADungeonSpace::ConstructDungeonGrid()
 						break;
 					}
 				}
-				//create instances for all objects on the tile
-				dungeonTileTranform.SetLocation(FVector(TileArray[tileIndex].left, TileArray[tileIndex].bottom, 0));
-				newInstanceIndex = FloorTileISMC->AddInstance(dungeonTileTranform);
+				//create instances for all objectsToSpawn on the tile
+				//loop over dungeon objectsToSpawn to create instances of meshes
+				if (TileArray[tileIndex].objectsToSpawn.Num() > 0)
+				{
+					int left, bottom;
+					for (int i = 0; i < TileArray[tileIndex].objectsToSpawn.Num(); i++)
+					{
+						left = TileArray[tileIndex].left;
+						bottom = TileArray[tileIndex].bottom;
+						//change ISMC depending on object type and the object width (helps with alighning object)
+						switch (TileArray[tileIndex].objectsToSpawn[i].objectType)
+						{
+						case EDungeonObjectType::FLOOR:
+							meshISMCToAddInstance = FloorTileISMC;
+							objectWidth = 0;
+							break;
+						case EDungeonObjectType::WALL:
+							meshISMCToAddInstance = WallTileISMC;
+							objectWidth = WallTileWidth;
+						case EDungeonObjectType::CEILING:
+							break;
+						case EDungeonObjectType::PILLAR:
+							break;
+						case EDungeonObjectType::TORCH:
+							break;
+						}
+
+						//change transform to alignment of object
+						FVector rotationVector = TileArray[tileIndex].objectsToSpawn[i].rotation;
+						float customDataValue = 0.7f;
+						switch (TileArray[tileIndex].objectsToSpawn[i].objectAlignement)
+						{
+						case EDungeonObjectAlign::LEFT:
+							dungeonTileTranform.SetLocation(FVector(left, bottom + TileSize / 2, 0));
+							dungeonTileTranform.SetRotation(rotationVector.Rotation().Quaternion());
+							customDataValue = 0.2f;
+							break;
+						case EDungeonObjectAlign::RIGHT:
+							dungeonTileTranform.SetLocation(FVector(left+TileSize, bottom + TileSize / 2, 0));
+							dungeonTileTranform.SetRotation(rotationVector.Rotation().Quaternion());
+							customDataValue = 0.2f;
+							break;
+						case EDungeonObjectAlign::TOP:
+							dungeonTileTranform.SetLocation(FVector(left + TileSize / 2, bottom + TileSize, 0));
+							dungeonTileTranform.SetRotation(rotationVector.Rotation().Quaternion());
+							customDataValue = 0.7f;
+							break;
+						case EDungeonObjectAlign::BOTTOM:
+							dungeonTileTranform.SetLocation(FVector(left + TileSize / 2, bottom, 0));
+							dungeonTileTranform.SetRotation(rotationVector.Rotation().Quaternion());
+							customDataValue = 0.7f;
+							break;
+						case EDungeonObjectAlign::CENTER:
+							dungeonTileTranform.SetLocation(FVector(left+TileSize/2, bottom+TileSize/2, 0));
+							dungeonTileTranform.SetRotation(rotationVector.Rotation().Quaternion());
+							break;
+						}
+
+						if (meshISMCToAddInstance != nullptr)
+						{
+							newInstanceIndex = meshISMCToAddInstance->AddInstance(dungeonTileTranform);
+							meshISMCToAddInstance->SetCustomDataValue(newInstanceIndex, 0, customDataValue, true);
+						}
+							
+						meshISMCToAddInstance = nullptr;
+					}
+				}
 			}
 		}
 	}
@@ -414,6 +539,36 @@ void ADungeonSpace::ShrinkSpaceToRoom(FSpace* currentSpace)
 			currentSpace->data.bottom += (extraTilesInHeight/2) * TileSize;
 		}
 	}
+}
+
+bool ADungeonSpace::CheckIfWallShouldBePlaced(int adjacentTileIndex, TArray<int>& roomCorridorConnections)
+{
+	//check if the adjacent tile is not in grid -> place wall
+	if (!TileArray.IsValidIndex(adjacentTileIndex))
+		return true;
+
+	//put wall if adjacent tile is empty
+	if (TileArray[adjacentTileIndex].tileType == ETileType::EMPTY)
+		return true;
+
+	//check if adjacent tile is corridor
+	if (TileArray[adjacentTileIndex].tileType == ETileType::CORRIDOR)
+	{
+		//check if corridor id of adjacent corridor is already connected
+		if (roomCorridorConnections.Find(TileArray[adjacentTileIndex].corridorID) != INDEX_NONE)
+		{
+			//corridor is already connected to room -> place wall
+			return true;
+		}
+		else
+		{
+			roomCorridorConnections.Add(TileArray[adjacentTileIndex].corridorID);
+			return false;
+		}
+	}
+
+	//do not place a wall
+	return false;
 }
 
 // Called every frame
