@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "BaseCharacter.generated.h"
 
+class UCameraComponent;
 UCLASS()
 class PROCEDURALGENDUNGEON_API ABaseCharacter : public ACharacter
 {
@@ -22,6 +23,10 @@ public:
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
+
+	/** First person camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		UCameraComponent* FirstPersonCameraComponent;
 
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
@@ -43,10 +48,15 @@ public:
 
 	void SpawnMinimap();
 	void GenerateDungeon();
+	void DebugTile();
+	void StartSprinting();
+	void StopSprinting();
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	
 
 public:	
 	// Called every frame
@@ -54,5 +64,6 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+private:
+	float BaseWalkSpeed;
 };

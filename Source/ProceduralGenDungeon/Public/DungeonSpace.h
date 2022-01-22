@@ -47,7 +47,7 @@ struct FDungeonObject
 
 	FDungeonObject()
 		:objectType(EDungeonObjectType::FLOOR)
-		, rotation(1,0,0)
+		, rotation(1, 0, 0)
 		, objectAlignement(EDungeonObjectAlign::CENTER)
 	{
 
@@ -71,12 +71,14 @@ struct FTile
 	TArray<FDungeonObject> objectsToSpawn;
 	ETileType tileType;
 	int corridorID;
+	int miniMapTileInstanceID;
 
 	FTile()
 		:left(0),
 		bottom(0),
-	tileType(ETileType::EMPTY),
-	corridorID(-1)
+		tileType(ETileType::EMPTY),
+		corridorID(-1),
+		miniMapTileInstanceID(0)
 	{
 
 	}
@@ -98,9 +100,7 @@ struct FCorridor
 		FIntVector start;
 	FIntVector end;
 	ESeperation seperation;
-	int id;
-	int fromSpaceID;
-	int toSpaceID;
+	TMap<int, int> doorMap; //first int is space id, second int is tile in the space that connects to the corridor
 };
 
 USTRUCT()
@@ -134,39 +134,6 @@ struct FSpace
 	}
 };
 
-USTRUCT()
-struct FCell
-{
-	GENERATED_BODY()
-
-		UPROPERTY()
-		int CellWidth;
-	UPROPERTY()
-		int CellHeight;
-	UPROPERTY()
-		int Left;
-	UPROPERTY()
-		int Bottom;
-
-	FCell()
-		:CellWidth(0),
-		CellHeight(0),
-		Left(0),
-		Bottom(0)
-	{
-
-	}
-
-	FCell(int cellWidth, int cellHeight, int left, int bottom)
-		:CellWidth(cellWidth),
-		CellHeight(cellHeight),
-		Left(left),
-		Bottom(bottom)
-	{
-
-	}
-};
-
 UCLASS()
 class PROCEDURALGENDUNGEON_API ADungeonSpace : public AActor
 {
@@ -175,13 +142,15 @@ class PROCEDURALGENDUNGEON_API ADungeonSpace : public AActor
 public:
 	// Sets default values for this actor's properties
 	ADungeonSpace();
+	void GenerateMinimap(FTransform& playerTransform);
+	void DebugTiles(FVector& tilePos);
 
 	/*The size of the dungeon should be divisible by the tilesize.*/
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Dungeon")
 		int DungeonSize = 36000;
 	/*The number of times the spaces will be split up randomly.*/
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Dungeon")
-		int RoomSplitIterations = 5;
+		int SplitIterations = 5;
 	/*The size of 1 tile. Must be the same size as the tile meshes (floors, ceilings and walls)*/
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Dungeon")
 		int TileSize = 600;
@@ -212,19 +181,15 @@ protected:
 		UInstancedStaticMeshComponent* FloorTileISMC;
 	UPROPERTY(VisibleAnywhere, Category = "Meshes")
 		UInstancedStaticMeshComponent* WallTileISMC;
-	
+
 
 private:
-	int CellCols;
-	int CellRows;
-	TArray<FCell> CellArray;
 	FSpace* RootSpace;
 	TArray<FSpace*> DungeonRooms;
-	TMap<int, FCorridor*> DungeonCorridors;
+	TMap<int, FCorridor*> DungeonCorridors; //first space id, second corridor
 	TArray<FTile> TileArray;
 	int TileRows;
 
-	void CreateCellGrid();
 	void GenerateDungeon();
 	FSpace* SplitSpace(FSpace* currentSpace, int index, int maxElements, FData parentData);
 	void PrintTree(FString& string, FSpace* root);
@@ -232,7 +197,11 @@ private:
 	void FillTileGrid();
 	void ConstructDungeonGrid();
 	void ShrinkSpaceToRoom(FSpace* currentSpace);
-	bool CheckIfWallShouldBePlaced(int adjacentTileIndex, TArray<int>& roomCorridorConnections);
+	bool CheckIfWallShouldBePlaced(int tileIndex, int adjacentTileIndex);
+	bool IsCorridorConnected(int tileIndex);
+	void PlaceCorridorsWalls(int tileIndex);
+	void ShowDebugTile(int tileIndex, FString& tileInfo, FColor colorBox);
+	void PlaceWalls(int tileIndex);
 
 public:
 	// Called every frame

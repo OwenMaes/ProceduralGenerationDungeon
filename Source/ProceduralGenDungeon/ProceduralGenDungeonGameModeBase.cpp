@@ -3,14 +3,15 @@
 
 #include "ProceduralGenDungeonGameModeBase.h"
 #include "BaseCharacter.h"
+#include "BasePlayerController.h"
 
 AProceduralGenDungeonGameModeBase::AProceduralGenDungeonGameModeBase()
 {
 	DefaultPawnClass = ABaseCharacter::StaticClass();
+	PlayerControllerClass = ABasePlayerController::StaticClass();
 }
 
 void AProceduralGenDungeonGameModeBase::BeginPlay()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Blue, TEXT("using AProceduralGenDungeonGameModeBase"));
+	
 }
