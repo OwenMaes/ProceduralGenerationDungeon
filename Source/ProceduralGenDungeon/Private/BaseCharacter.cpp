@@ -100,8 +100,17 @@ void ABaseCharacter::SpawnMinimap()
 
 void ABaseCharacter::GenerateDungeon()
 {
-	if (GEngine)
-		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Emerald, TEXT("Generate dungeon"));
+	TArray<AActor*> DungeonSpaces;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADungeonSpace::StaticClass(), DungeonSpaces);
+
+	if (DungeonSpaces.Num() > 0)
+	{
+		ADungeonSpace* DungeonSpace = ((ADungeonSpace*)DungeonSpaces[0]);
+		if (IsValid(DungeonSpace))
+		{
+			DungeonSpace->GenerateDungeon();
+		}
+	}
 }
 
 void ABaseCharacter::DebugTile()

@@ -133,6 +133,11 @@ void ADungeonSpace::BeginPlay()
 
 void ADungeonSpace::GenerateDungeon()
 {
+	if (GEngine)
+		GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Emerald, TEXT("Generating dungeon..."));
+
+	ResetDungeon();
+
 	const int maxElements = pow(2, SplitIterations + 1) - 1;
 	FData parentData = FData();
 	parentData.width = DungeonSize;
@@ -145,6 +150,7 @@ void ADungeonSpace::GenerateDungeon()
 	SelectDungeonRooms(RootSpace, 0);
 	FillTileGrid();
 	ConstructDungeonGrid();
+	IsDungeonGenerated = true;
 }
 
 FSpace* ADungeonSpace::SplitSpace(FSpace* currentSpace, int index, int maxElements, FData parentData)
@@ -544,13 +550,6 @@ bool ADungeonSpace::CheckIfWallShouldBePlaced(int tileIndex, int adjacentTileInd
 	if (TileArray[adjacentTileIndex].tileType == ETileType::EMPTY)
 		return true;
 
-	if (TileArray[tileIndex].tileType == ETileType::ROOM && TileArray[adjacentTileIndex].tileType == ETileType::CORRIDOR)
-		return true;
-	
-	//check if other corridor tiles are also connected to room
-	if(TileArray[tileIndex].tileType == ETileType::CORRIDOR && TileArray[adjacentTileIndex].tileType == ETileType::ROOM)
-		return true;
-
 	return false;
 }
 
@@ -652,6 +651,16 @@ void ADungeonSpace::PlaceWalls(int tileIndex)
 	}
 
 	
+}
+
+void ADungeonSpace::ResetDungeon()
+{
+	TileArray.Init(FTile(), TileRows * TileRows);
+	CubeISMC->ClearInstances();
+	FloorTileISMC->ClearInstances();
+	WallTileISMC->ClearInstances();
+	DungeonRooms.Empty();
+	DungeonCorridors.Empty();
 }
 
 // Called every frame

@@ -100,7 +100,6 @@ struct FCorridor
 		FIntVector start;
 	FIntVector end;
 	ESeperation seperation;
-	TMap<int, int> doorMap; //first int is space id, second int is tile in the space that connects to the corridor
 };
 
 USTRUCT()
@@ -121,7 +120,7 @@ USTRUCT()
 struct FSpace
 {
 	GENERATED_BODY()
-		FData data;
+	FData data;
 	FSpace* left;
 	FSpace* right;
 
@@ -144,6 +143,7 @@ public:
 	ADungeonSpace();
 	void GenerateMinimap(FTransform& playerTransform);
 	void DebugTiles(FVector& tilePos);
+	void GenerateDungeon();
 
 	/*The size of the dungeon should be divisible by the tilesize.*/
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Dungeon")
@@ -189,8 +189,9 @@ private:
 	TMap<int, FCorridor*> DungeonCorridors; //first space id, second corridor
 	TArray<FTile> TileArray;
 	int TileRows;
+	bool IsDungeonGenerated;
 
-	void GenerateDungeon();
+	
 	FSpace* SplitSpace(FSpace* currentSpace, int index, int maxElements, FData parentData);
 	void PrintTree(FString& string, FSpace* root);
 	void SelectDungeonRooms(FSpace* currentSpace, int currentDepth);
@@ -202,6 +203,7 @@ private:
 	void PlaceCorridorsWalls(int tileIndex);
 	void ShowDebugTile(int tileIndex, FString& tileInfo, FColor colorBox);
 	void PlaceWalls(int tileIndex);
+	void ResetDungeon();
 
 public:
 	// Called every frame
