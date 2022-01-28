@@ -29,7 +29,7 @@ I use a TArray of tiles, each tile has the same size. I loop over the rooms, til
 ### Other methods
 <img width="455" alt="wwNjc" src="https://user-images.githubusercontent.com/97401433/151264312-fbb7fbd2-46e0-4f98-b5ef-269f5e08098d.png">
 
-Another way to create dungeons is to randomly create rooms (points and dimensions). Select the rooms that are not overlapping or use steering behaviour to separate all the rooms. Connect all the rooms with the Minimum Spanning Tree (MST) algorithm, which creates the least amount of connections and makes each room reachable.
+Another way to create dungeons is to randomly create rooms (points and dimensions). Select the rooms that are not overlapping or separate the rooms. Connect all the rooms with the Minimum Spanning Tree (MST) algorithm, which creates the least amount of connections and makes each room reachable.
 
 ### Conclusion
 Using BSP is a very fast way to create a randomized dungeon, i can repeatdly generate a new dungeon instantly in unreal. The general efficiency is O(1), but it depends on the author’s implementation. The number of splits, number of children, and the dimensions of the spaces all impact the efficiency. 
